@@ -244,6 +244,33 @@ static ssize_t scst_local_add_host_store(struct device_driver *ddp,
 static DRIVER_ATTR(add_host, S_IRUGO | S_IWUSR, scst_local_add_host_show,
 	    scst_local_add_host_store);
 
+
+
+static ssize_t scst_local_rescan_hosts_show(struct device_driver *ddp, char *buf)
+{
+	return 0;
+}
+
+
+static ssize_t scst_local_rescan_hosts_store(struct device_driver *ddp,
+					     const char *buf, size_t count)
+{
+	struct list_head *p;
+	struct scst_local_host_info *lcl_host;
+
+	list_for_each (p, &scst_local_host_list) {
+		lcl_host = list_entry (p, struct scst_local_host_info, host_list);
+		scsi_scan_host (lcl_host->shost);
+	}
+
+	return count;
+}
+
+
+static DRIVER_ATTR(rescan, S_IRUGO | S_IWUSR, scst_local_rescan_hosts_show,
+	    scst_local_rescan_hosts_store);
+
+
 static int do_create_driverfs_files(void)
 {
 	int ret;
@@ -252,6 +279,9 @@ static int do_create_driverfs_files(void)
 
 	ret = driver_create_file(&scst_local_driverfs_driver,
 				 &driver_attr_add_host);
+
+	ret = driver_create_file(&scst_local_driverfs_driver,
+				 &driver_attr_rescan);
 
 	TRACE_EXIT_RES(ret);
 	return ret;
@@ -1075,4 +1105,3 @@ error:
 	TRACE_EXIT_RES(ret);
 	return ret;
 }
-

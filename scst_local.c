@@ -255,12 +255,37 @@ static ssize_t scst_local_rescan_hosts_show(struct device_driver *ddp, char *buf
 static ssize_t scst_local_rescan_hosts_store(struct device_driver *ddp,
 					     const char *buf, size_t count)
 {
+	unsigned int channel, id, lun;
+	struct scsi_device *sdev;
+	struct scsi_sense_hdr eh_hdr;
+	struct Scsi_Host *host;
+	int res;
 	struct list_head *p;
 	struct scst_local_host_info *lcl_host;
 
 	list_for_each (p, &scst_local_host_list) {
 		lcl_host = list_entry (p, struct scst_local_host_info, host_list);
-		scsi_scan_host (lcl_host->shost);
+		host = lcl_host->shost;
+
+		for (channel = 0; channel <= host->max_channel; channel++) {
+			for (id = 0; id < host->max_id; id++) {
+				for (lun = 0; lun < 256; lun++) {
+					scsi_scan_target (&host->shost_gendev, channel, id, lun, 0);
+					sdev = scsi_device_lookup (host, channel, id, lun);
+
+					if (sdev) {
+						res = scsi_test_unit_ready (sdev, 30*HZ, 5, &eh_hdr);
+						scsi_device_put (sdev);
+						if (res) {
+							printk (KERN_INFO "%u:%u:%u, test failed = %x, remove LUN\n", channel, id, lun, res);
+							scsi_remove_device (sdev);
+						}
+						else
+							printk (KERN_INFO "%u:%u:%u, test passed\n", channel, id, lun);
+					}
+				}
+			}
+		}
 	}
 
 	return count;
@@ -711,8 +736,9 @@ static void scst_local_remove_adapter(void)
 	TRACE_EXIT();
 }
 
+
 static struct scsi_host_template scst_lcl_ini_driver_template = {
-	.proc_info 			= scst_local_proc_info,
+	.proc_info			= scst_local_proc_info,
 	.proc_name			= scst_local_proc_name,
 	.name				= SCST_LOCAL_NAME,
 	.info				= scst_local_info,
@@ -1069,6 +1095,7 @@ static void scst_local_targ_task_mgmt_done(struct scst_mgmt_cmd *mgmt_cmd)
 	TRACE_EXIT();
 	return;
 }
+
 
 static struct scst_tgt_template scst_local_targ_tmpl = {
 	.name			= "scst_local_tgt",

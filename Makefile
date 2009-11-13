@@ -17,7 +17,7 @@ EXTRA_CFLAGS	+= -DCONFIG_SCST_EXTRACHECKS
 #EXTRA_CFLAGS	+= -DCONFIG_SCST_TRACING
 EXTRA_CFLAGS	+= -DCONFIG_SCST_DEBUG
 
-KDIR := /home/shmuma/work/kernel/src/linux-2.6.29.4
+#KDIR := /home/shmuma/work/kernel/src/linux-2.6.29.4
 
 ifeq ($(KVER),)
   ifeq ($(KDIR),)
